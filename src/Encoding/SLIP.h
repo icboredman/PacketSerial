@@ -33,7 +33,6 @@
 #pragma once
 
 
-#include "Arduino.h"
 
 
 /// \brief A Serial Line IP (SLIP) Encoder.

@@ -30,7 +30,6 @@
 #pragma once
 
 
-#include "Arduino.h"
 
 
 /// \brief A Consistent Overhead Byte Stuffing (COBS) Encoder.

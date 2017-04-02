@@ -25,7 +25,6 @@
 #pragma once
 
 
-#include <Arduino.h>
 #include "Encoding/COBS.h"
 #include "Encoding/SLIP.h"
 
@@ -47,6 +46,7 @@ public:
     {
     }
 
+#if defined(ARDUINO)
     void begin(unsigned long baud, size_t port = 0)
     {
         switch(port)
@@ -79,6 +79,12 @@ public:
     {
         _serial = serial;
     }
+#elif defined(__unix__)
+    void begin(serial::Serial* serial)
+    {
+        _serial = serial;
+    }
+#endif
 
     void update()
     {
@@ -86,8 +92,12 @@ public:
 
         while (_serial->available() > 0)
         {
+#if defined(ARDUINO)
             uint8_t data = _serial->read();
-
+#elif defined(__unix__)
+            uint8_t data;
+            _serial->read(&data, 1);
+#endif
             if (data == PacketMarker)
             {
                 if (_onPacketFunction)
@@ -128,7 +138,12 @@ public:
                                                 _encodeBuffer);
 
         _serial->write(_encodeBuffer, numEncoded);
+#if defined(ARDUINO)
         _serial->write(PacketMarker);
+#elif defined(__unix__)
+        uint8_t data = PacketMarker;
+        _serial->write(&data, 1);
+#endif
     }
 
     void setPacketHandler(PacketHandlerFunction onPacketFunction)
@@ -144,7 +159,11 @@ private:
     uint8_t _recieveBuffer[BufferSize];
     size_t _recieveBufferIndex;
 
+#if defined(ARDUINO)
     Stream* _serial;
+#elif defined(__unix__)
+    serial::Serial* _serial;
+#endif
 
     PacketHandlerFunction _onPacketFunction;
 
@@ -154,3 +173,4 @@ private:
  typedef PacketSerial_<COBS> PacketSerial;
  typedef PacketSerial_<COBS> COBSPacketSerial;
  typedef PacketSerial_<SLIP, SLIP::END> SLIPPacketSerial;
+
