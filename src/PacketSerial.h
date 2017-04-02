@@ -28,6 +28,11 @@
 #include "Encoding/COBS.h"
 #include "Encoding/SLIP.h"
 
+#if defined(ARDUINO)
+  typedef Stream HSerial;
+#elif defined(__unix__)
+  typedef serial::Serial HSerial;
+#endif
 
 template<typename EncoderType, uint8_t PacketMarker = 0, size_t BufferSize = 256>
 class PacketSerial_
@@ -36,7 +41,7 @@ public:
     typedef void (*PacketHandlerFunction)(const uint8_t* buffer, size_t size);
 
     PacketSerial_():
-        _recieveBufferIndex(0),
+        _receiveBufferIndex(0),
         _serial(0),
         _onPacketFunction(0)
     {
@@ -46,7 +51,6 @@ public:
     {
     }
 
-#if defined(ARDUINO)
     void begin(unsigned long baud, size_t port = 0)
     {
         switch(port)
@@ -69,22 +73,18 @@ public:
                 _serial = &Serial3;
                 break;
         #endif
+        #if defined(ARDUINO)
             default:
                 Serial.begin(baud);
                 _serial = &Serial;
+        #endif
         }
     }
 
-    void begin(Stream* serial)
+    void begin(HSerial* serial)
     {
         _serial = serial;
     }
-#elif defined(__unix__)
-    void begin(serial::Serial* serial)
-    {
-        _serial = serial;
-    }
-#endif
 
     void update()
     {
@@ -92,32 +92,33 @@ public:
 
         while (_serial->available() > 0)
         {
-#if defined(ARDUINO)
-            uint8_t data = _serial->read();
-#elif defined(__unix__)
             uint8_t data;
+#if defined(ARDUINO)
+            data = _serial->read();
+#elif defined(__unix__)
             _serial->read(&data, 1);
 #endif
             if (data == PacketMarker)
             {
                 if (_onPacketFunction)
                 {
-                    uint8_t _decodeBuffer[_recieveBufferIndex];
+                    uint8_t *_decodeBuffer = new uint8_t[_receiveBufferIndex];
 
                     size_t numDecoded = EncoderType::decode(_recieveBuffer,
-                                                            _recieveBufferIndex,
+                                                            _receiveBufferIndex,
                                                             _decodeBuffer);
 
                     _onPacketFunction(_decodeBuffer, numDecoded);
+                    delete[] _decodeBuffer;
                 }
 
-                _recieveBufferIndex = 0;
+                _receiveBufferIndex = 0;
             }
             else
             {
-                if ((_recieveBufferIndex + 1) < BufferSize)
+                if ((_receiveBufferIndex + 1) < BufferSize)
                 {
-                    _recieveBuffer[_recieveBufferIndex++] = data;
+                    _recieveBuffer[_receiveBufferIndex++] = data;
                 }
                 else
                 {
@@ -127,23 +128,20 @@ public:
         }
     }
 
-    void send(const uint8_t* buffer, size_t size)
+    bool send(const uint8_t* buffer, size_t size)
     {
-        if(_serial == 0 || buffer == 0 || size == 0) return;
+        if(_serial == 0 || buffer == 0 || size == 0) return false;
 
-        uint8_t _encodeBuffer[EncoderType::getEncodedBufferSize(size)];
+        uint8_t *_encodeBuffer = new uint8_t[EncoderType::getEncodedBufferSize(size)+1];
 
         size_t numEncoded = EncoderType::encode(buffer,
                                                 size,
                                                 _encodeBuffer);
+        _encodeBuffer[numEncoded] = PacketMarker;
+        size_t n = _serial->write(_encodeBuffer, numEncoded+1);
 
-        _serial->write(_encodeBuffer, numEncoded);
-#if defined(ARDUINO)
-        _serial->write(PacketMarker);
-#elif defined(__unix__)
-        uint8_t data = PacketMarker;
-        _serial->write(&data, 1);
-#endif
+        delete[] _encodeBuffer;
+        return (n == numEncoded+1);
     }
 
     void setPacketHandler(PacketHandlerFunction onPacketFunction)
@@ -157,13 +155,9 @@ private:
     PacketSerial_& operator = (const PacketSerial_&);
 
     uint8_t _recieveBuffer[BufferSize];
-    size_t _recieveBufferIndex;
+    size_t _receiveBufferIndex;
 
-#if defined(ARDUINO)
-    Stream* _serial;
-#elif defined(__unix__)
-    serial::Serial* _serial;
-#endif
+    HSerial* _serial;
 
     PacketHandlerFunction _onPacketFunction;
 
@@ -173,4 +167,5 @@ private:
  typedef PacketSerial_<COBS> PacketSerial;
  typedef PacketSerial_<COBS> COBSPacketSerial;
  typedef PacketSerial_<SLIP, SLIP::END> SLIPPacketSerial;
+
 
