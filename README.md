@@ -1,5 +1,8 @@
-# MessageSerial
-A library that facilitates unambiguous packet framing over serial encoding such as COBS and SLIP.
+# MessageSerial 
+Arduino and Unix packet-based serial communication library.
+* Uses COBS or SLIP protocol to reduce framing errors and CRC for general error detection.
+* Supports flexible message definition.
+
 
 ## Usage
 
