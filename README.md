@@ -1,8 +1,9 @@
 # MessageSerial 
-Arduino and Unix packet-based serial communication library.
+Arduino and Linux compatible packet-based serial communication library. It was originally created based on [PacketSerial by bakercp](https://github.com/bakercp/PacketSerial) and extended with flexible message payload functionality and CRC error checking.
 * Uses COBS or SLIP protocol to reduce framing errors and CRC for general error detection.
 * Supports flexible message definition.
 
+More info in my blog post: https://BoredomProjects.net/index.php/projects/robot-navigation-using-stereo-vision
 
 ## Usage
 
