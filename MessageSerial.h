@@ -33,8 +33,9 @@
 #include "Encoding/COBS.h"
 #include "Encoding/SLIP.h"
 
+#if !defined(MSG_SERIAL_SKIP_CRC)
 #include "FastCRC.h"
-
+#endif
 
 #if defined(ARDUINO)
   typedef Stream HSerial;
@@ -102,10 +103,12 @@ public:
                                                  decodeBuffer);
         receiveBufferIndex = 0;
 
+#if !defined(MSG_SERIAL_SKIP_CRC)
         // check CRC
         uint16_t crc = CRC16.ccitt(decodeBuffer, numDecoded-2);
         if ( decodeBuffer[numDecoded-2] == (crc >> 8)  &&
              decodeBuffer[numDecoded-1] == (crc & 0xff) )
+#endif
         {
           uint8_t id = decodeBuffer[0];
           if( id < MAX_MSGS                            &&
@@ -150,10 +153,12 @@ public:
     buffer[0] = id;
     memcpy(&buffer[1], msg_data, msg_size);
 
+#if !defined(MSG_SERIAL_SKIP_CRC)
     // CRC including id
     uint16_t crc = CRC16.ccitt(buffer, msg_size+1);
     buffer[msg_size+1] = crc >> 8;   // high byte
     buffer[msg_size+2] = crc & 0xff; // low byte
+#endif
 
     uint8_t *encodeBuffer = new uint8_t[EncoderType::getEncodedBufferSize(msg_size+4)]; // + marker
     size_t numEncoded = EncoderType::encode(buffer, msg_size+3, encodeBuffer);
@@ -186,7 +191,9 @@ protected:
 
   HSerial* _serial;
 
+#if !defined(MSG_SERIAL_SKIP_CRC)
   FastCRC16 CRC16;
+#endif
 };
 
 
