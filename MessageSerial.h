@@ -4,7 +4,7 @@
 // It was modified by adding helper class Message to generalize message format
 // and CRC checking based on FastCRC library.
 //
-// Copyright (c) 2017 boredman <http://BoredomProjects.net>
+// Copyright (c) 2019 boredman <http://BoredomProjects.net>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -86,13 +86,15 @@ public:
   {
     if (_serial == 0) return;
 
+    uint8_t data;
+
+#if defined(ARDUINO)
     while (_serial->available() > 0)
     {
-      uint8_t data;
-#if defined(ARDUINO)
       data = _serial->read();
 #elif defined(__unix__)
-      _serial->read(&data, 1);
+    while (_serial->read(&data, 1) == 1)
+    {
 #endif
       if (data == PacketMarker)
       {
